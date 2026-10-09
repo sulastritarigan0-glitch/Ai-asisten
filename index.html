@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EduGen & AI Tutor</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Inter & FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Marked.js for Markdown Rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow: hidden; background-color: #f8fafc; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .loader {
+            border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%;
+            width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .quiz-option input[type="radio"] { display: none; }
+        .quiz-option { cursor: pointer; transition: all 0.2s; }
+        
+        .markdown-body p { margin-bottom: 0.75em; line-height: 1.6; }
+        .markdown-body strong { color: #1e293b; }
+        .markdown-body ul { margin-left: 1.5rem; margin-bottom: 1em; list-style-type: disc; }
+        .markdown-body ol { margin-left: 1.5rem; margin-bottom: 1em; list-style-type: decimal; }
+        .markdown-body pre { background: #1e293b; color: white; padding: 1rem; border-radius: 0.75rem; overflow-x: auto; margin-bottom: 1em;}
+        .markdown-body code { font-family: monospace; background: #f1f5f9; color: #ef4444; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.875em;}
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 { font-weight: 700; margin-top: 1.5em; margin-bottom: 0.5em; color: #0f172a; }
+        
+        @media print {
+            body { overflow: visible !important; height: auto !important; background-color: white; }
+            #mainScrollArea { overflow: visible !important; }
+            .no-print, aside, header, button, #mobileDrawer, #welcomeScreen, form, #profileModal { display: none !important; }
+            .tab-section { display: none !important; }
+            .tab-section.print-active { display: block !important; }
+            .print-border { border: 1px solid #e2e8f0 !important; box-shadow: none !important; margin-bottom: 20px; }
+            .print-break-inside-avoid { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 h-screen w-full relative flex">
+
+    <!-- WELCOME SCREEN -->
+    <div id="welcomeScreen" class="fixed inset-0 z-[100] bg-gradient-to-br from-brand-600 to-indigo-900 flex flex-col items-center justify-center text-white p-6 transition-opacity duration-300">
+        <div class="text-center max-w-xl fade-in">
+            <div class="w-24 h-24 bg-white/20 backdrop-blur-md rounded-3xl mx-auto mb-8 flex items-center justify-center shadow-2xl border border-white/30">
+                <i class="fa-solid fa-graduation-cap text-5xl text-white"></i>
+            </div>
+            <h1 class="text-4xl md:text-6xl font-extrabold mb-4 tracking-tight drop-shadow-lg">EduGen & AI Tutor</h1>
+            <p class="text-blue-100 text-lg md:text-xl mb-12 font-medium" data-i18n="welcomeSub">Platform Belajar Cerdas.<br>Buat soal otomatis, simulasi try out, dan tanya PR dengan foto!</p>
+            <button onclick="startApp()" class="group relative px-10 py-4 bg-white text-brand-700 font-bold text-xl rounded-full shadow-2xl hover:scale-105 transition-all duration-300 ring-4 ring-white/30">
+                <span data-i18n="btnWelcome">Yes, Start Learning!</span>
+                <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- MOBILE DRAWER -->
+    <div id="mobileDrawer" class="fixed inset-0 z-[60] hidden">
+        <div id="mobileBackdrop" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0" onclick="toggleMobileMenu(true)"></div>
+        <aside id="mobileSidebarPanel" class="absolute top-0 left-0 bottom-0 w-64 bg-slate-900 text-slate-300 flex flex-col shadow-2xl transform transition-transform duration-300 -translate-x-full">
+            <div class="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-950">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-graduation-cap text-brand-500 text-xl mr-3"></i>
+                    <span class="text-white font-bold text-lg tracking-wide">EduGen</span>
+                </div>
+                <button onclick="toggleMobileMenu(true)" class="text-slate-400 hover:text-white text-2xl p-1 w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <nav class="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
+                <button onclick="switchTab('generator')" class="mobile-nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl text-white bg-brand-600 shadow-md transition-all">
+                    <i class="fa-solid fa-file-pen w-6 text-center mr-2"></i> <span data-i18n="menuGen">Generator Soal</span>
+                </button>
+                <button onclick="switchTab('tryout')" class="mobile-nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-laptop-code w-6 text-center mr-2"></i> <span data-i18n="menuTO">Try Out Ujian</span>
+                </button>
+                <button onclick="switchTab('tutor')" class="mobile-nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-camera-retro w-6 text-center mr-2"></i> <span data-i18n="menuPR">Asisten PR (Foto)</span>
+                </button>
+                <button onclick="switchTab('trivia')" class="mobile-nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-gamepad w-6 text-center mr-2"></i> <span data-i18n="menuTrivia">Kuis Trivia</span>
+                </button>
+                <button onclick="switchTab('study')" class="mobile-nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-lightbulb w-6 text-center mr-2"></i> <span data-i18n="menuStudy">Cara Belajar</span>
+                </button>
+            </nav>
+        </aside>
+    </div>
+
+    <!-- DESKTOP SIDEBAR -->
+    <aside class="w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden md:flex flex-col h-full z-20 shadow-xl no-print">
+        <div class="h-16 flex items-center px-6 border-b border-slate-800 bg-slate-950">
+            <i class="fa-solid fa-graduation-cap text-brand-500 text-2xl mr-3"></i>
+            <span class="text-white font-bold text-xl tracking-wide">EduGen</span>
+        </div>
+        <nav class="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
+            <button onclick="switchTab('generator')" data-tab="generator" class="desktop-nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl text-white bg-brand-600 shadow-md transition-all">
+                <i class="fa-solid fa-file-pen w-6 text-center mr-2"></i> <span data-i18n="menuGen">Generator Soal</span>
+            </button>
+            <button onclick="switchTab('tryout')" data-tab="tryout" class="desktop-nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                <i class="fa-solid fa-laptop-code w-6 text-center mr-2"></i> <span data-i18n="menuTO">Try Out Ujian</span>
+            </button>
+            <button onclick="switchTab('tutor')" data-tab="tutor" class="desktop-nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                <i class="fa-solid fa-camera-retro w-6 text-center mr-2"></i> <span data-i18n="menuPR">Asisten PR (Foto)</span>
+            </button>
+            <button onclick="switchTab('trivia')" data-tab="trivia" class="desktop-nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                <i class="fa-solid fa-gamepad w-6 text-center mr-2"></i> <span data-i18n="menuTrivia">Kuis Trivia</span>
+            </button>
+            <button onclick="switchTab('study')" data-tab="study" class="desktop-nav-btn w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white transition-all">
+                <i class="fa-solid fa-lightbulb w-6 text-center mr-2"></i> <span data-i18n="menuStudy">Cara Belajar</span>
+            </button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full relative overflow-hidden bg-slate-50">
+        <!-- HEADER -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 shrink-0 z-10 shadow-sm no-print">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleMobileMenu()" class="md:hidden text-slate-600 hover:text-brand-600 text-xl w-10 h-10 flex items-center justify-center rounded-lg bg-slate-50 border border-slate-200 transition-colors">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h2 id="headerTitle" class="text-xl font-bold text-slate-800 hidden sm:block">Generator Soal AI</h2>
+                <h2 id="headerTitleMobile" class="text-lg font-bold text-slate-800 sm:hidden">EduGen</h2>
+            </div>
+            
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="toggleLanguage()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1 transition-colors">
+                    <i class="fa-solid fa-globe text-brand-600"></i>
+                    <span id="langDisplay">ID</span>
+                </button>
+
+                <button onclick="openProfileModal()" class="flex items-center gap-3 hover:bg-slate-50 p-1.5 rounded-xl transition-colors border border-transparent cursor-pointer">
+                    <div class="text-right hidden sm:block">
+                        <p id="profileNameDisplay" class="text-sm font-bold text-slate-700 leading-tight">Pengguna</p>
+                        <p class="text-[10px] text-slate-500 font-medium inline-block mt-0.5">
+                            <span id="profileLevelDisplay" class="bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full mr-1">SMA</span>
+                            <span class="text-amber-500 font-bold"><i class="fa-solid fa-star"></i> <span id="profileXpDisplay">0</span> XP</span>
+                        </p>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-slate-200 border-2 border-brand-500 overflow-hidden flex items-center justify-center text-slate-500 relative shrink-0 shadow-sm">
+                        <img id="profilePicDisplay" src="" alt="Profile" class="w-full h-full object-cover hidden absolute inset-0 z-10">
+                        <i id="profileIconDisplay" class="fa-solid fa-user absolute z-0"></i>
+                    </div>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN SCROLL AREA -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 pb-20" id="mainScrollArea">
+            
+            <div id="errorBanner" class="hidden no-print mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-xl shadow-sm text-sm text-red-700 flex items-center gap-3 relative">
+                <i class="fa-solid fa-triangle-exclamation text-lg shrink-0"></i>
+                <span id="errorMsg" class="flex-1">Terjadi kesalahan.</span>
+                <button onclick="document.getElementById('errorBanner').classList.add('hidden')" class="text-red-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- TAB GENERATOR -->
+            <section id="sec-generator" class="tab-section block print-active">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 h-fit no-print">
+                        <h3 class="font-bold text-slate-800 mb-4"><i class="fa-solid fa-sliders text-brand-500 mr-2"></i> <span data-i18n="lblGenConfig">Pengaturan Soal</span></h3>
+                        <form id="genForm" onsubmit="handleGenerate(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1" data-i18n="lblSubject">Topik / Mata Pelajaran</label>
+                                <input type="text" id="genSubject" required placeholder="Cth: Fotosintesis, Aljabar" class="w-full rounded-lg border-slate-300 border p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1" data-i18n="lblType">Tipe Soal</label>
+                                    <select id="genType" class="w-full rounded-lg border-slate-300 border p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50">
+                                        <option value="PG">Pilihan Ganda</option>
+                                        <option value="TrueFalse">Benar / Salah</option>
+                                        <option value="Essay">Essay Singkat</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1" data-i18n="lblCount">Jumlah</label>
+                                    <select id="genCount" class="w-full rounded-lg border-slate-300 border p-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50">
+                                        <option value="3">3 Soal</option>
+                                        <option value="5" selected>5 Soal</option>
+                                        <option value="10">10 Soal</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" id="btnGenSubmit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 rounded-xl transition-colors flex justify-center items-center gap-2 mt-2 shadow-md">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="btnGenAI">Buat Soal AI</span>
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div class="lg:col-span-8 flex flex-col gap-4">
+                        <div id="genEmpty" class="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center flex-1 flex flex-col items-center justify-center no-print">
+                            <i class="fa-solid fa-robot text-5xl text-slate-200 mb-4"></i>
+                            <h4 class="font-bold text-slate-400" data-i18n="emptyTitle">Belum ada soal</h4>
+                            <p class="text-slate-400 text-sm mt-1" data-i18n="emptySub">Pilih pengaturan di samping dan klik "Buat Soal AI"</p>
+                        </div>
+
+                        <div id="genQuizContainer" class="hidden space-y-4"></div>
+                        
+                        <div id="genActionContainer" class="hidden bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-end no-print">
+                            <button onclick="evaluateGenerator()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-8 rounded-lg transition-colors shadow-md" data-i18n="btnFinishQuiz">
+                                Selesai & Cek Nilai
+                            </button>
+                        </div>
+
+                        <div id="genResultBox" class="hidden bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row justify-between items-center fade-in gap-4 print-border print:bg-white print:text-black">
+                            <div>
+                                <h3 class="text-xl font-bold text-emerald-400 print:text-emerald-700 mb-1" data-i18n="resTitle">Hasil Evaluasi</h3>
+                                <p class="text-xs text-slate-400 print:text-slate-600 mb-3" data-i18n="resRule">Sistem penilaian ketat: Jawaban kosong = 0 poin.</p>
+                                <div class="flex flex-wrap gap-2 text-sm font-medium">
+                                    <span class="bg-emerald-500/20 text-emerald-400 print:text-emerald-700 px-3 py-1 rounded border border-emerald-500/30" id="genStatBenar">Benar: 0</span>
+                                    <span class="bg-rose-500/20 text-rose-400 print:text-rose-700 px-3 py-1 rounded border border-rose-500/30" id="genStatSalah">Salah: 0</span>
+                                    <span class="bg-slate-500/20 text-slate-300 print:text-slate-700 px-3 py-1 rounded border border-slate-500/30" id="genStatKosong">Kosong: 0</span>
+                                </div>
+                            </div>
+                            <div class="text-center bg-white/10 print:bg-slate-100 rounded-xl px-8 py-4 border border-white/10 print:border-slate-300">
+                                <span class="block text-[10px] uppercase tracking-wider text-slate-400 print:text-slate-500 mb-1" data-i18n="scoreLabel">Nilai Akhir</span>
+                                <span id="genScore" class="text-4xl font-extrabold text-white print:text-slate-800">0</span>
+                            </div>
+                        </div>
+
+                        <div id="genTools" class="hidden mt-2 flex justify-end gap-2 no-print fade-in">
+                             <button onclick="window.print()" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium transition flex items-center shadow-sm"><i class="fa-solid fa-print mr-2"></i> <span data-i18n="btnPrint">Cetak / Simpan PDF</span></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB TRY OUT -->
+            <section id="sec-tryout" class="tab-section hidden h-full flex-col">
+                <div id="toConfigScreen" class="max-w-xl mx-auto w-full bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mt-4 md:mt-10">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-3 text-brand-600 text-2xl">
+                            <i class="fa-solid fa-laptop-code"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-2xl" data-i18n="menuTO">Try Out Ujian (CBT)</h3>
+                        <p class="text-sm text-slate-500 mt-1" data-i18n="toSub">Simulasi Computer Based Test dengan timer dan navigasi ala UTBK/SNBT.</p>
+                    </div>
+                    <form onsubmit="startTryoutAPI(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1" data-i18n="lblSubject">Topik Try Out</label>
+                            <input type="text" id="toTopic" required placeholder="Cth: UTBK Penalaran Umum, Biologi Kelas 12" class="w-full rounded-lg border-slate-300 border p-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1" data-i18n="lblCount">Jumlah Soal</label>
+                                <select id="toCount" class="w-full rounded-lg border-slate-300 border p-3 text-sm outline-none bg-slate-50 focus:ring-2 focus:ring-brand-500">
+                                    <option value="5">5 Soal</option><option value="10" selected>10 Soal</option><option value="20">20 Soal</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1" data-i18n="lblTime">Waktu (Menit)</label>
+                                <input type="number" id="toTime" min="1" max="120" value="15" required class="w-full rounded-lg border-slate-300 border p-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition">
+                            </div>
+                        </div>
+                        <button type="submit" id="btnToSubmit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl transition-colors flex justify-center items-center gap-2 mt-4 shadow-lg">
+                            <i class="fa-solid fa-play"></i> <span data-i18n="btnStartTO">Mulai Simulasi Ujian</span>
+                        </button>
+                    </form>
+                </div>
+
+                <div id="toExamScreen" class="hidden flex-col lg:flex-row gap-4 h-[calc(100vh-140px)] min-h-[500px] w-full">
+                    <div class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden relative">
+                        <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center shrink-0">
+                            <div class="font-bold text-slate-700 truncate pr-4" id="toSubjectTitle">Subtes</div>
+                            <div class="bg-rose-100 text-rose-700 px-3 md:px-4 py-1.5 rounded-lg font-mono font-bold border border-rose-200 flex items-center gap-2 shrink-0">
+                                <i class="fa-regular fa-clock"></i> <span id="toTimerDisplay">00:00</span>
+                            </div>
+                        </div>
+                        <div class="p-4 md:p-6 flex-1 overflow-y-auto" id="toQuestionArea">
+                            <div class="flex flex-col md:flex-row gap-4">
+                                <div id="toQNumber" class="w-10 h-10 bg-brand-100 text-brand-700 font-bold rounded-xl flex items-center justify-center shrink-0 text-lg border border-brand-200">1</div>
+                                <div class="w-full">
+                                    <p id="toQText" class="font-medium text-slate-800 mb-6 text-base md:text-lg leading-relaxed"></p>
+                                    <div id="toOptionsArea" class="space-y-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 border-t border-slate-200 flex justify-between items-center bg-slate-50 gap-2 shrink-0">
+                            <button onclick="navTryout(-1)" id="btnToPrev" class="px-4 py-2.5 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 text-sm font-medium shadow-sm transition"><i class="fa-solid fa-arrow-left mr-1 md:hidden"></i><span class="hidden md:inline">Sebelumnya</span></button>
+                            
+                            <label class="flex items-center gap-2 cursor-pointer bg-yellow-50 px-4 py-2.5 rounded-lg border border-yellow-200 hover:bg-yellow-100 transition shadow-sm">
+                                <input type="checkbox" id="toFlagCheck" onchange="toggleTryoutFlag()" class="w-4 h-4 text-yellow-500 rounded border-yellow-300 focus:ring-yellow-500">
+                                <span class="text-sm font-bold text-yellow-700 hidden sm:inline">Ragu-ragu</span>
+                                <span class="text-sm font-bold text-yellow-700 sm:hidden">Ragu</span>
+                            </label>
+
+                            <button onclick="navTryout(1)" id="btnToNext" class="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium shadow-sm transition"><span class="hidden md:inline">Selanjutnya</span><i class="fa-solid fa-arrow-right ml-1 md:hidden"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full lg:w-72 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col shrink-0 lg:h-full max-h-[300px] lg:max-h-full">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="font-bold text-sm text-slate-600">Navigasi Soal</h4>
+                            <button onclick="finishTryout(false)" class="lg:hidden text-xs bg-rose-500 text-white px-3 py-1 rounded shadow">Akhiri</button>
+                        </div>
+                        <div id="toGridArea" class="grid grid-cols-5 gap-2 flex-1 content-start overflow-y-auto pr-1"></div>
+                        <button onclick="finishTryout(false)" class="hidden lg:block w-full mt-4 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-xl shadow text-sm transition">Akhiri Ujian Sekarang</button>
+                    </div>
+                </div>
+
+                <div id="toResultScreen" class="hidden max-w-2xl mx-auto w-full bg-white p-8 rounded-2xl shadow-md border border-slate-200 text-center fade-in mt-4 md:mt-10">
+                    <i class="fa-solid fa-flag-checkered text-5xl text-brand-500 mb-4"></i>
+                    <h2 class="text-3xl font-extrabold text-slate-800 mb-2">Simulasi Selesai</h2>
+                    <p class="text-slate-500 mb-8 font-medium" id="toEndReason">Disubmit Manual</p>
+                    
+                    <div class="grid grid-cols-3 gap-3 md:gap-4 mb-8">
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 md:p-6 shadow-sm">
+                            <div class="text-3xl md:text-4xl font-black text-emerald-600 mb-1" id="toResBenar">0</div>
+                            <div class="text-[10px] md:text-xs font-bold text-emerald-800 uppercase tracking-widest">Benar</div>
+                        </div>
+                        <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 md:p-6 shadow-sm">
+                            <div class="text-3xl md:text-4xl font-black text-rose-600 mb-1" id="toResSalah">0</div>
+                            <div class="text-[10px] md:text-xs font-bold text-rose-800 uppercase tracking-widest">Salah</div>
+                        </div>
+                        <div class="bg-slate-100 border border-slate-200 rounded-xl p-4 md:p-6 shadow-sm">
+                            <div class="text-3xl md:text-4xl font-black text-slate-600 mb-1" id="toResKosong">0</div>
+                            <div class="text-[10px] md:text-xs font-bold text-slate-800 uppercase tracking-widest">Kosong</div>
+                        </div>
+                    </div>
+                    
+                    <button onclick="resetTryout()" class="w-full sm:w-auto bg-slate-900 text-white font-bold py-3.5 px-8 rounded-xl hover:bg-slate-800 transition shadow-md">
+                        Coba Ujian Lain
+                    </button>
+                </div>
+            </section>
+
+            <!-- TAB TUTOR / PR -->
+            <section id="sec-tutor" class="tab-section hidden">
+                <div class="max-w-4xl mx-auto mt-2 md:mt-6">
+                    <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200 mb-6 relative overflow-hidden no-print">
+                        <div class="relative z-10">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-lg font-bold"><i class="fa-solid fa-camera-viewfinder"></i></div>
+                                <h3 class="font-bold text-slate-800 text-xl" data-i18n="menuPR">Asisten PR (Vision)</h3>
+                            </div>
+                            <p class="text-sm text-slate-500 mb-6 font-medium leading-relaxed max-w-2xl" data-i18n="prSub">Ketik soal tugasmu atau Foto soal di buku/kertas menggunakan kamera. AI Gemini akan menganalisis gambar dan memberikan panduan penyelesaian langkah demi langkah.</p>
+                            
+                            <form onsubmit="handlePR(event)">
+                                <div id="prImgPreviewContainer" class="hidden mb-4 relative inline-block">
+                                    <div class="p-1.5 bg-white border border-slate-200 rounded-xl shadow-sm">
+                                        <img id="prImgPreview" class="h-32 md:h-48 rounded-lg object-contain max-w-full bg-slate-50">
+                                    </div>
+                                    <button type="button" onclick="clearPRImage()" class="absolute -top-3 -right-3 bg-rose-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-rose-600 border-2 border-white">
+                                        <i class="fa-solid fa-xmark text-sm"></i>
+                                    </button>
+                                </div>
+
+                                <textarea id="prInput" rows="4" placeholder="Ketik soal atau instruksi tambahan di sini..." 
+                                    class="w-full rounded-xl border-slate-300 border p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none mb-4 bg-slate-50/50 resize-y shadow-inner transition"></textarea>
+                                
+                                <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                                    <input type="file" id="prImgInput" accept="image/*" capture="environment" class="hidden" onchange="previewPRImage(event)">
+                                    <button type="button" onclick="document.getElementById('prImgInput').click()" class="w-full sm:w-auto text-brand-700 bg-brand-50 hover:bg-brand-100 px-6 py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm font-bold border border-brand-200 shadow-sm">
+                                        <i class="fa-solid fa-camera text-lg"></i> <span data-i18n="btnUploadPhoto">Unggah / Foto Soal</span>
+                                    </button>
+                                    <button type="submit" id="btnPRSubmit" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 px-8 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md w-full sm:w-auto">
+                                        <i class="fa-solid fa-paper-plane"></i> <span data-i18n="btnAskAI">Minta Penjelasan AI</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div id="prResult" class="hidden bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200 fade-in print-border relative">
+                        <div class="flex items-center gap-2 text-brand-600 font-bold mb-6 pb-4 border-b border-slate-100 text-lg pr-20 print:text-black">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Penjelasan AI Tutor
+                        </div>
+                        <div id="prContent" class="markdown-body text-slate-700 text-sm md:text-base print:text-black"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB TRIVIA -->
+            <section id="sec-trivia" class="tab-section hidden">
+                <div class="max-w-2xl mx-auto mt-4 md:mt-10">
+                    <div id="triviaConfig">
+                        <div class="bg-gradient-to-r from-amber-400 to-orange-500 p-8 rounded-3xl shadow-lg text-white mb-6 text-center relative overflow-hidden">
+                            <h2 class="text-3xl font-extrabold mb-2 drop-shadow-sm">Trivia Cepat!</h2>
+                            <p class="text-white/90 text-sm font-medium">Uji kecepatan nalar. Hanya 10 Detik per soal!</p>
+                        </div>
+                        <form onsubmit="startTriviaAPI(event)" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                            <label class="block text-sm font-bold text-slate-700 mb-3">Pilih Tema Kuis</label>
+                            <select id="triviaTopic" class="w-full rounded-xl border-slate-300 border p-4 text-sm font-medium outline-none mb-4 bg-slate-50 focus:ring-2 focus:ring-orange-400 transition">
+                                <option value="Fakta Sains Unik">Fakta Sains Unik</option>
+                                <option value="Sejarah Dunia">Sejarah Dunia</option>
+                                <option value="Ibukota Negara">Tebak Ibukota Negara</option>
+                                <option value="Unsur Kimia">Tebak Unsur Kimia</option>
+                            </select>
+                            <button type="submit" id="btnTriviaSubmit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-xl shadow-md transition-colors text-lg">
+                                Mulai Main!
+                            </button>
+                        </form>
+                    </div>
+
+                    <div id="triviaPlay" class="hidden bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden fade-in relative">
+                        <div class="h-2.5 w-full bg-slate-100 relative">
+                            <div id="triviaTimerBar" class="h-full bg-orange-500 absolute left-0 top-0 transition-[width] duration-1000 ease-linear" style="width: 100%"></div>
+                        </div>
+                        <div class="p-6 md:p-8">
+                            <div class="flex justify-between items-center mb-6 text-xs font-bold text-slate-500 uppercase">
+                                <span id="triviaCountInfo" class="bg-slate-100 px-4 py-1.5 rounded-full border border-slate-200">Soal 1/5</span>
+                                <span id="triviaTimeText" class="text-orange-600 font-mono text-lg bg-orange-50 px-4 py-1 rounded-full border border-orange-200 shadow-sm">10s</span>
+                            </div>
+                            <h3 id="triviaQuestion" class="text-xl md:text-2xl font-bold text-slate-800 mb-8 text-center leading-snug min-h-[80px] flex items-center justify-center"></h3>
+                            <div id="triviaOptions" class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="triviaResult" class="hidden text-center fade-in mt-6">
+                        <div class="inline-block bg-white p-8 md:p-10 rounded-3xl shadow-xl border border-slate-200 w-full md:w-auto">
+                            <h2 class="text-3xl font-extrabold text-slate-800 mb-6">Game Over!</h2>
+                            <div class="flex justify-center gap-6 md:gap-10 mb-8 border-y border-slate-100 py-6">
+                                <div class="text-center"><div class="text-5xl font-black text-emerald-500 mb-2" id="trivResBenar">0</div><div class="text-xs font-bold text-slate-400 uppercase">BENAR</div></div>
+                                <div class="w-px bg-slate-200"></div>
+                                <div class="text-center"><div class="text-5xl font-black text-rose-500 mb-2" id="trivResSalah">0</div><div class="text-xs font-bold text-slate-400 uppercase">SALAH</div></div>
+                            </div>
+                            <button onclick="resetTrivia()" class="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-10 rounded-xl shadow-lg transition-transform hover:scale-105">Main Lagi</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB STUDY -->
+            <section id="sec-study" class="tab-section hidden">
+                <div class="max-w-5xl mx-auto mt-2 md:mt-4">
+                    <div class="bg-slate-900 rounded-3xl p-8 md:p-12 text-white text-center shadow-xl relative overflow-hidden no-print">
+                        <h3 class="text-2xl md:text-4xl font-extrabold mb-4 relative z-10 tracking-tight">AI Study Planner</h3>
+                        <p class="text-slate-300 text-sm md:text-base mb-8 max-w-xl mx-auto relative z-10 leading-relaxed">AI akan menyusun jadwal mingguan spesifik sesuai identitas pelajar Anda.</p>
+                        <button id="btnStudyAI" onclick="generateStudyPlan()" class="bg-brand-500 hover:bg-brand-600 text-white font-bold py-4 px-8 md:px-12 rounded-full shadow-lg transition-all hover:scale-105 relative z-10 text-lg">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Buatkan Rencana Belajar Saya
+                        </button>
+                    </div>
+
+                    <div id="studyPlanResult" class="hidden mt-8 bg-white p-6 md:p-10 rounded-3xl border border-slate-200 shadow-sm fade-in print-border relative">
+                        <div id="studyPlanContent" class="markdown-body text-sm md:text-base print:text-black"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- PROFILE & IDENTITAS SISWA MODAL -->
+    <div id="profileModal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                <h3 class="font-extrabold text-xl text-slate-800">Tanda Pengenal Siswa</h3>
+                <button onclick="closeProfileModal()" class="text-slate-400 hover:text-rose-500 bg-slate-100 hover:bg-rose-50 w-8 h-8 rounded-full flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="flex flex-col items-center gap-2 mb-2">
+                    <div class="w-24 h-24 rounded-full bg-slate-50 border-2 border-dashed border-brand-300 flex items-center justify-center overflow-hidden relative group shadow-sm transition hover:border-brand-500">
+                        <img id="modalProfilePic" src="" class="w-full h-full object-cover hidden">
+                        <i id="modalProfileIcon" class="fa-solid fa-user text-3xl text-slate-300 absolute"></i>
+                        <label class="absolute inset-0 bg-black/60 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity text-xs font-bold">
+                            <i class="fa-solid fa-camera mb-1 text-lg"></i> Ubah Foto
+                            <input type="file" accept="image/*" class="hidden" onchange="handleModalImageUpload(event)">
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Nama Lengkap</label>
+                    <input type="text" id="modalName" placeholder="Contoh: Budi Santoso" class="w-full rounded-xl border-slate-300 border p-3 text-sm font-medium outline-none focus:border-brand-500 transition">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Umur</label>
+                        <input type="number" id="modalAge" placeholder="Cth: 17" class="w-full rounded-xl border-slate-300 border p-3 text-sm font-medium outline-none focus:border-brand-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Jenjang</label>
+                        <select id="modalLevel" class="w-full rounded-xl border-slate-300 border p-3 text-sm font-medium outline-none focus:border-brand-500 transition bg-white">
+                            <option value="SD">SD / MI</option>
+                            <option value="SMP">SMP / MTs</option>
+                            <option value="SMA">SMA / SMK / MA</option>
+                            <option value="Kuliah">Perguruan Tinggi / Kuliah</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Nama Sekolah / Universitas</label>
+                    <input type="text" id="modalSchool" placeholder="Contoh: SMAN 1 Jakarta / Univ. Gadjah Mada" class="w-full rounded-xl border-slate-300 border p-3 text-sm font-medium outline-none focus:border-brand-500 transition">
+                </div>
+
+                <button onclick="saveProfile()" class="w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl hover:bg-slate-800 transition shadow-md mt-2">
+                    Simpan Identitas
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        /* Kamus Bahasa (Dictionary i18n) */
+        const i18n = {
+            id: {
+                welcomeSub: "Platform Belajar Cerdas.<br>Buat soal otomatis, simulasi try out, dan tanya PR dengan foto!",
+                btnWelcome: "Yes, Start Learning!",
+                menuGen: "Generator Soal",
+                menuTO: "Try Out Ujian",
+                menuPR: "Asisten PR (Foto)",
+                menuTrivia: "Kuis Trivia",
+                menuStudy: "Cara Belajar",
+                lblGenConfig: "Pengaturan Soal",
+                lblSubject: "Topik / Mata Pelajaran",
+                lblType: "Tipe Soal",
+                lblCount: "Jumlah",
+                lblTime: "Waktu (Menit)",
+                btnGenAI: "Buat Soal AI",
+                emptyTitle: "Belum ada soal",
+                emptySub: "Pilih pengaturan di samping dan klik \"Buat Soal AI\"",
+                btnFinishQuiz: "Selesai & Cek Nilai",
+                resTitle: "Hasil Evaluasi",
+                resRule: "Sistem penilaian ketat: Jawaban kosong = 0 poin.",
+                scoreLabel: "Nilai Akhir",
+                btnPrint: "Cetak / Simpan PDF",
+                toSub: "Simulasi Computer Based Test dengan timer dan navigasi ala UTBK/SNBT.",
+                btnStartTO: "Mulai Simulasi Ujian",
+                prSub: "Ketik soal tugasmu atau Foto soal di buku/kertas menggunakan kamera. AI Gemini akan menganalisis gambar dan memberikan panduan penyelesaian langkah demi langkah.",
+                btnUploadPhoto: "Unggah / Foto Soal",
+                btnAskAI: "Minta Penjelasan AI"
+            },
+            en: {
+                welcomeSub: "Smart Learning Platform.<br>Auto-generate quizzes, CBT tryouts, and solve homework with photos!",
+                btnWelcome: "Yes, Start Learning!",
+                menuGen: "Question Generator",
+                menuTO: "Exam Tryouts",
+                menuPR: "Homework Helper (Photo)",
+                menuTrivia: "Quick Trivia",
+                menuStudy: "Study Planner",
+                lblGenConfig: "Question Settings",
+                lblSubject: "Topic / Subject",
+                lblType: "Question Type",
+                lblCount: "Amount",
+                lblTime: "Time (Minutes)",
+                btnGenAI: "Generate AI Questions",
+                emptyTitle: "No questions generated",
+                emptySub: "Select settings on the left and click \"Generate AI Questions\"",
+                btnFinishQuiz: "Submit & Check Score",
+                resTitle: "Evaluation Results",
+                resRule: "Strict grading: Blank answers = 0 points.",
+                scoreLabel: "Final Score",
+                btnPrint: "Print / Save PDF",
+                toSub: "Computer Based Test simulation with timer and interactive navigation.",
+                btnStartTO: "Start Exam Simulation",
+                prSub: "Type your homework question or take a photo. Gemini AI will analyze the image and provide step-by-step guidance.",
+                btnUploadPhoto: "Upload / Take Photo",
+                btnAskAI: "Get AI Explanation"
+            }
+        };
+
+        /* State Global */
+        const state = {
+            lang: 'id',
+            profile: { name: 'Budi Santoso', age: 17, level: 'SMA', school: 'SMAN 1 Jakarta', avatar: null, xp: 0 },
+            gen: { data: [], userAnswers: {}, evaluated: false, type: 'PG' },
+            tryout: { data: [], userAnswers: {}, flagged: {}, currentQ: 0, timer: 0, interval: null, evaluated: false },
+            trivia: { data: [], currentQ: 0, timer: 10, interval: null, score: {benar:0, salah:0} },
+            pr: { imageBase64: null, imageMime: null }
+        };
+
+        window.onload = () => {
+            loadSettings();
+            loadProfile();
+        };
+
+        /* --- SETTINGS & LANGUAGE SYSTEM --- */
+        function loadSettings() {
+            try {
+                state.lang = localStorage.getItem('eduLang') || 'id';
+                applyTranslations();
+            } catch(e){}
+        }
+
+        function toggleLanguage() {
+            state.lang = state.lang === 'id' ? 'en' : 'id';
+            try { localStorage.setItem('eduLang', state.lang); } catch(e){}
+            applyTranslations();
+        }
+
+        function applyTranslations() {
+            const dict = i18n[state.lang] || i18n.id;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if(dict[key]) el.innerHTML = dict[key];
+            });
+            document.getElementById('langDisplay').textContent = state.lang.toUpperCase();
+        }
+
+        /* --- UI FLOW & MOBILE MENU --- */
+        function startApp() {
+            const welcome = document.getElementById('welcomeScreen');
+            welcome.style.opacity = '0';
+            setTimeout(() => welcome.classList.add('hidden'), 300);
+        }
+
+        function toggleMobileMenu(forceClose = false) {
+            const drawer = document.getElementById('mobileDrawer');
+            const panel = document.getElementById('mobileSidebarPanel');
+            const backdrop = document.getElementById('mobileBackdrop');
+            
+            if (forceClose || !drawer.classList.contains('hidden')) {
+                panel.classList.add('-translate-x-full');
+                backdrop.classList.add('opacity-0');
+                setTimeout(() => drawer.classList.add('hidden'), 300);
+            } else {
+                drawer.classList.remove('hidden');
+                setTimeout(() => {
+                    panel.classList.remove('-translate-x-full');
+                    backdrop.classList.remove('opacity-0');
+                }, 10);
+            }
+        }
+
+        function switchTab(tabId) {
+            toggleMobileMenu(true);
+
+            const desktopBtns = document.querySelectorAll('.desktop-nav-btn');
+            const mobileBtns = document.querySelectorAll('.mobile-nav-btn');
+            const inactiveClass = "w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800 hover:text-white text-slate-300 transition-all";
+            const activeClass = "w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl text-white bg-brand-600 shadow-md transition-all";
+
+            desktopBtns.forEach(btn => btn.className = `desktop-nav-btn ${inactiveClass}`);
+            mobileBtns.forEach(btn => btn.className = `mobile-nav-btn ${inactiveClass}`);
+            
+            document.querySelectorAll(`button[onclick="switchTab('${tabId}')"]`).forEach(btn => {
+                btn.className = (btn.classList.contains('desktop-nav-btn') ? 'desktop-nav-btn ' : 'mobile-nav-btn ') + activeClass;
+            });
+
+            document.querySelectorAll('.tab-section').forEach(sec => {
+                sec.classList.add('hidden');
+                sec.classList.remove('print-active');
+                if (sec.id === 'sec-tryout') sec.classList.remove('flex');
+            });
+            
+            const activeSec = document.getElementById(`sec-${tabId}`);
+            activeSec.classList.remove('hidden');
+            activeSec.classList.add('print-active');
+            if(tabId === 'tryout') activeSec.classList.add('flex');
+
+            const titles = { 'generator': 'Generator Soal AI', 'tutor': 'Asisten PR (Vision)', 'tryout': 'Try Out Ujian (CBT)', 'trivia': 'Kuis Trivia Cepat', 'study': 'Tips & Rencana Belajar' };
+            document.getElementById('headerTitle').textContent = titles[tabId];
+            document.getElementById('mainScrollArea').scrollTop = 0;
+        }
+
+        /* --- PROFILE SYSTEM --- */
+        function loadProfile() {
+            try {
+                state.profile.name = localStorage.getItem('eduName') || 'Budi Santoso';
+                state.profile.age = localStorage.getItem('eduAge') || '17';
+                state.profile.level = localStorage.getItem('eduLevel') || 'SMA';
+                state.profile.school = localStorage.getItem('eduSchool') || 'SMAN 1 Jakarta';
+                state.profile.avatar = localStorage.getItem('eduAvatar') || null;
+                state.profile.xp = parseInt(localStorage.getItem('eduXp')) || 0;
+                updateProfileUI();
+            } catch(e){}
+        }
+
+        function saveProfile() {
+            state.profile.name = document.getElementById('modalName').value.trim() || 'Pengguna';
+            state.profile.age = document.getElementById('modalAge').value || '17';
+            state.profile.level = document.getElementById('modalLevel').value;
+            state.profile.school = document.getElementById('modalSchool').value.trim() || 'Sekolah';
+            
+            const tempAvatar = document.getElementById('modalProfilePic').dataset.temp;
+            if (tempAvatar) state.profile.avatar = tempAvatar;
+
+            try {
+                localStorage.setItem('eduName', state.profile.name);
+                localStorage.setItem('eduAge', state.profile.age);
+                localStorage.setItem('eduLevel', state.profile.level);
+                localStorage.setItem('eduSchool', state.profile.school);
+                if(state.profile.avatar) localStorage.setItem('eduAvatar', state.profile.avatar);
+            } catch(e) {}
+
+            updateProfileUI();
+            closeProfileModal();
+        }
+
+        function addXP(amount) {
+            state.profile.xp += amount;
+            try { localStorage.setItem('eduXp', state.profile.xp); } catch(e){}
+            document.getElementById('profileXpDisplay').textContent = state.profile.xp;
+        }
+
+        function updateProfileUI() {
+            document.getElementById('profileNameDisplay').textContent = state.profile.name;
+            document.getElementById('profileLevelDisplay').textContent = state.profile.level;
+            document.getElementById('profileXpDisplay').textContent = state.profile.xp;
+            
+            document.getElementById('modalName').value = state.profile.name;
+            document.getElementById('modalAge').value = state.profile.age;
+            document.getElementById('modalLevel').value = state.profile.level;
+            document.getElementById('modalSchool').value = state.profile.school;
+
+            if (state.profile.avatar) {
+                const img1 = document.getElementById('profilePicDisplay');
+                const img2 = document.getElementById('modalProfilePic');
+                img1.src = state.profile.avatar; img1.classList.remove('hidden');
+                img2.src = state.profile.avatar; img2.classList.remove('hidden');
+                document.getElementById('profileIconDisplay').classList.add('hidden');
+                document.getElementById('modalProfileIcon').classList.add('hidden');
+            }
+        }
+
+        function handleModalImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('modalProfilePic').src = e.target.result;
+                    document.getElementById('modalProfilePic').classList.remove('hidden');
+                    document.getElementById('modalProfileIcon').classList.add('hidden');
+                    document.getElementById('modalProfilePic').dataset.temp = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function openProfileModal() { document.getElementById('profileModal').classList.remove('hidden'); document.getElementById('profileModal').classList.add('flex'); }
+        function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); document.getElementById('profileModal').classList.remove('flex'); }
+
+        function showError(msg) {
+            const banner = document.getElementById('errorBanner');
+            document.getElementById('errorMsg').textContent = msg;
+            banner.classList.remove('hidden');
+            setTimeout(() => banner.classList.add('hidden'), 5000);
+        }
+
+        /* --- VERCEL BACKEND API ENGINE --- */
+        async function fetchAI(prompt, systemMsg, useJSON, base64 = null, mime = null) {
+            const langInstruction = state.lang === 'en' ? "Please respond fully in English." : "Harap merespon seluruhnya dalam Bahasa Indonesia.";
+            const fullSystemMsg = `${systemMsg}\n${langInstruction}`;
+
+            try {
+                // Memanggil Vercel Serverless Function /api/generate
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, systemMsg: fullSystemMsg, useJSON, base64, mime })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || "Gagal menghubungi API Server Vercel.");
+                }
+
+                const data = await res.json();
+                const text = data.candidates[0].content.parts[0].text;
+                return useJSON ? JSON.parse(text) : text;
+            } catch (err) {
+                console.error(err);
+                showError(err.message);
+                return null;
+            }
+        }
+
+        /* --- GENERATOR SOAL --- */
+        async function handleGenerate(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnGenSubmit');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="loader border-white border-t-transparent"></span>'; btn.disabled = true;
+
+            const subject = document.getElementById('genSubject').value;
+            const type = document.getElementById('genType').value;
+            const count = document.getElementById('genCount').value;
+            const level = state.profile.level;
+
+            let promptStr = `Buat ${count} soal ${type} untuk jenjang ${level} mata pelajaran ${subject}.`;
+            const sys = "Anda pembuat soal profesional. Output array JSON. Untuk PG, correctAnswer harus identik dengan salah satu opsi.";
+            
+            const result = await fetchAI(promptStr, sys, true);
+            if (result) {
+                state.gen.data = result;
+                state.gen.type = type;
+                state.gen.userAnswers = {};
+                state.gen.evaluated = false;
+                
+                document.getElementById('genEmpty').classList.add('hidden');
+                document.getElementById('genResultBox').classList.add('hidden');
+                document.getElementById('genTools').classList.add('hidden');
+                document.getElementById('genQuizContainer').classList.remove('hidden');
+                document.getElementById('genActionContainer').classList.remove('hidden');
+                document.getElementById('genActionContainer').classList.add('flex');
+                
+                renderGenQuiz();
+            }
+            btn.innerHTML = originalText; btn.disabled = false;
+        }
+
+        function renderGenQuiz() {
+            const container = document.getElementById('genQuizContainer');
+            container.innerHTML = '';
+            
+            state.gen.data.forEach((q, idx) => {
+                const isEval = state.gen.evaluated;
+                const uAns = state.gen.userAnswers[idx] || '';
+                
+                let inputHtml = '';
+                
+                if (state.gen.type === 'Essay') {
+                    const bgClass = isEval ? (uAns.trim()==='' ? 'bg-rose-50 border-rose-300' : 'bg-slate-50 border-slate-200') : 'bg-white border-slate-300';
+                    inputHtml = `<textarea class="w-full mt-4 p-3 rounded-xl border text-sm ${bgClass}" rows="3" placeholder="Tulis jawabanmu di sini..." onchange="setGenAnswer(${idx}, this.value)" ${isEval?'disabled':''}>${uAns}</textarea>`;
+                } else {
+                    inputHtml = `<div class="mt-4 space-y-2">`;
+                    if(isEval && !uAns) inputHtml = `<div class="mb-3 inline-block bg-slate-200 text-slate-700 text-xs font-bold px-3 py-1 rounded-full">TIDAK DIJAWAB (0 Poin)</div>` + inputHtml;
+                    
+                    (q.options || []).forEach(opt => {
+                        const isSelected = uAns === opt;
+                        const isCorrect = opt === q.correctAnswer;
+                        let style = "border-slate-200 text-slate-700 hover:bg-slate-50";
+                        
+                        if (!isEval && isSelected) style = "border-brand-500 bg-brand-50 ring-1 ring-brand-500";
+                        if (isEval) {
+                            if (isCorrect) style = "border-emerald-500 bg-emerald-50 font-bold ring-1 ring-emerald-500 text-emerald-800";
+                            else if (isSelected && !isCorrect) style = "border-rose-300 bg-rose-50 text-rose-500 line-through";
+                            else style = "border-slate-100 text-slate-400 opacity-50";
+                        }
+
+                        inputHtml += `
+                            <label class="quiz-option flex items-center p-3 rounded-xl border bg-white ${style}">
+                                <input type="radio" name="gen-q${idx}" value="${opt}" ${isSelected?'checked':''} ${isEval?'disabled':''} onchange="setGenAnswer(${idx}, '${opt.replace(/'/g, "\\'")}')">
+                                <span class="text-sm">${opt}</span>
+                            </label>
+                        `;
+                    });
+                    inputHtml += `</div>`;
+                }
+                
+                let expHtml = isEval ? `<div class="mt-4 p-4 bg-brand-50 border border-brand-100 rounded-xl text-sm"><div class="font-bold text-brand-800 mb-1">Kunci & Pembahasan:</div><p class="text-brand-700 leading-relaxed">${q.explanation}</p></div>` : '';
+
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="flex gap-4">
+                            <span class="w-8 h-8 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-600 text-sm shrink-0">${idx+1}</span>
+                            <div class="flex-1"><p class="font-bold text-slate-800 leading-snug">${q.question}</p>${inputHtml}${expHtml}</div>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        function setGenAnswer(idx, ans) {
+            if(state.gen.evaluated) return;
+            state.gen.userAnswers[idx] = ans;
+            if(state.gen.type !== 'Essay') renderGenQuiz();
+        }
+
+        function evaluateGenerator() {
+            state.gen.evaluated = true;
+            let b = 0, s = 0, k = 0;
+            const isEssay = state.gen.type === 'Essay';
+
+            state.gen.data.forEach((q, i) => {
+                const ans = state.gen.userAnswers[i] || '';
+                if (ans.trim() === '') k++; // Kosong = 0
+                else {
+                    if (isEssay) b++;
+                    else {
+                        if (ans === q.correctAnswer) b++;
+                        else s++;
+                    }
+                }
+            });
+            
+            document.getElementById('genActionContainer').classList.add('hidden');
+            document.getElementById('genResultBox').classList.remove('hidden');
+            document.getElementById('genTools').classList.remove('hidden');
+            document.getElementById('genTools').classList.add('flex');
+            
+            document.getElementById('genStatBenar').textContent = isEssay ? `Terjawab: ${b}` : `Benar: ${b}`;
+            document.getElementById('genStatSalah').textContent = `Salah: ${s}`;
+            document.getElementById('genStatKosong').textContent = `Kosong: ${k}`;
+
+            const score = (b / state.gen.data.length * 100).toFixed(0);
+            document.getElementById('genScore').textContent = score;
+            
+            if(b > 0) addXP(b * 10);
+            renderGenQuiz();
+        }
+
+        /* --- TRY OUT CBT --- */
+        async function startTryoutAPI(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnToSubmit');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<span class="loader border-white border-t-transparent"></span>'; btn.disabled = true;
+
+            const top = document.getElementById('toTopic').value;
+            const count = parseInt(document.getElementById('toCount').value);
+            const mins = parseInt(document.getElementById('toTime').value);
+            
+            const prompt = `Buatkan ${count} soal ujian Try Out CBT topik "${top}" untuk tingkat ${state.profile.level}.`;
+            const sys = "Anda pembuat soal CBT. Output JSON array.";
+            
+            const res = await fetchAI(prompt, sys, true);
+            if (res) {
+                state.tryout.data = res;
+                state.tryout.userAnswers = {};
+                state.tryout.flagged = {};
+                state.tryout.currentQ = 0;
+                state.tryout.timer = mins * 60;
+                
+                document.getElementById('toConfigScreen').classList.add('hidden');
+                document.getElementById('toResultScreen').classList.add('hidden');
+                document.getElementById('toExamScreen').classList.remove('hidden');
+                document.getElementById('toExamScreen').classList.add('flex');
+                document.getElementById('toSubjectTitle').textContent = `Try Out: ${top}`;
+                
+                renderTryoutGrid();
+                renderTryoutQuestion();
+                startTryoutTimer();
+            }
+            btn.innerHTML = orig; btn.disabled = false;
+        }
+
+        function renderTryoutGrid() {
+            const grid = document.getElementById('toGridArea');
+            grid.innerHTML = '';
+            state.tryout.data.forEach((_, i) => {
+                const ans = state.tryout.userAnswers[i];
+                const isFlagged = state.tryout.flagged[i];
+                const isActive = state.tryout.currentQ === i;
+                
+                let bg = "bg-white border-slate-300 text-slate-600";
+                if(isActive) bg = "border-brand-500 ring-2 ring-brand-300 font-bold text-brand-700";
+                if(isFlagged) bg += " !bg-yellow-400 !border-yellow-500 !text-yellow-900";
+                else if(ans) bg += " !bg-emerald-500 !border-emerald-600 !text-white";
+
+                grid.insertAdjacentHTML('beforeend', `<button onclick="navTryoutTo(${i})" class="w-10 h-10 border rounded-lg text-sm font-semibold flex items-center justify-center ${bg}">${i+1}</button>`);
+            });
+        }
+
+        function renderTryoutQuestion() {
+            const qIdx = state.tryout.currentQ;
+            const q = state.tryout.data[qIdx];
+            const ans = state.tryout.userAnswers[qIdx];
+            
+            document.getElementById('toQNumber').textContent = qIdx + 1;
+            document.getElementById('toQText').textContent = q.question;
+            
+            const optArea = document.getElementById('toOptionsArea');
+            optArea.innerHTML = '';
+            
+            (q.options || []).forEach(opt => {
+                const isSelected = ans === opt;
+                const style = isSelected ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500' : 'border-slate-200 hover:bg-slate-50';
+                
+                optArea.insertAdjacentHTML('beforeend', `
+                    <label class="quiz-option flex items-center p-3 md:p-4 rounded-xl border bg-white ${style}">
+                        <input type="radio" name="to-q${qIdx}" value="${opt}" ${isSelected?'checked':''} onchange="setTryoutAnswer('${opt.replace(/'/g, "\\'")}')">
+                        <span class="text-sm">${opt}</span>
+                    </label>
+                `);
+            });
+
+            document.getElementById('btnToPrev').disabled = (qIdx === 0);
+            document.getElementById('btnToNext').disabled = (qIdx === state.tryout.data.length - 1);
+            document.getElementById('toFlagCheck').checked = !!state.tryout.flagged[qIdx];
+        }
+
+        function setTryoutAnswer(val) { state.tryout.userAnswers[state.tryout.currentQ] = val; renderTryoutGrid(); renderTryoutQuestion(); }
+        function toggleTryoutFlag() { state.tryout.flagged[state.tryout.currentQ] = !state.tryout.flagged[state.tryout.currentQ]; renderTryoutGrid(); }
+        function navTryoutTo(idx) { state.tryout.currentQ = idx; renderTryoutGrid(); renderTryoutQuestion(); }
+        function navTryout(dir) { const newQ = state.tryout.currentQ + dir; if(newQ >= 0 && newQ < state.tryout.data.length) navTryoutTo(newQ); }
+
+        function startTryoutTimer() {
+            if(state.tryout.interval) clearInterval(state.tryout.interval);
+            const update = () => {
+                const m = Math.floor(state.tryout.timer / 60).toString().padStart(2,'0');
+                const s = (state.tryout.timer % 60).toString().padStart(2,'0');
+                document.getElementById('toTimerDisplay').textContent = `${m}:${s}`;
+            };
+            update();
+            state.tryout.interval = setInterval(() => {
+                state.tryout.timer--;
+                update();
+                if(state.tryout.timer <= 0) finishTryout(true);
+            }, 1000);
+        }
+
+        function finishTryout(isTimeout) {
+            clearInterval(state.tryout.interval);
+            document.getElementById('toExamScreen').classList.add('hidden');
+            document.getElementById('toExamScreen').classList.remove('flex');
+            
+            let b = 0, s = 0, k = 0;
+            state.tryout.data.forEach((q, i) => {
+                const ans = state.tryout.userAnswers[i];
+                if (!ans) k++;
+                else if (ans === q.correctAnswer) b++;
+                else s++;
+            });
+
+            document.getElementById('toEndReason').textContent = isTimeout ? 'Waktu Habis!' : 'Disubmit Manual.';
+            document.getElementById('toResBenar').textContent = b;
+            document.getElementById('toResSalah').textContent = s;
+            document.getElementById('toResKosong').textContent = k;
+            
+            if(b > 0) addXP(b * 20);
+            document.getElementById('toResultScreen').classList.remove('hidden');
+        }
+
+        function resetTryout() {
+            document.getElementById('toResultScreen').classList.add('hidden');
+            document.getElementById('toConfigScreen').classList.remove('hidden');
+        }
+
+        /* --- ASISTEN PR (VISION) --- */
+        function previewPRImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            state.pr.imageMime = file.type;
+            const r = new FileReader();
+            r.onload = ev => {
+                state.pr.imageBase64 = ev.target.result;
+                document.getElementById('prImgPreview').src = ev.target.result;
+                document.getElementById('prImgPreviewContainer').classList.remove('hidden');
+            };
+            r.readAsDataURL(file);
+        }
+        
+        function clearPRImage() {
+            state.pr.imageBase64 = null; state.pr.imageMime = null;
+            document.getElementById('prImgInput').value = '';
+            document.getElementById('prImgPreviewContainer').classList.add('hidden');
+        }
+
+        async function handlePR(e) {
+            e.preventDefault();
+            const text = document.getElementById('prInput').value.trim();
+            if(!text && !state.pr.imageBase64) return;
+
+            const btn = document.getElementById('btnPRSubmit');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<span class="loader border-white border-t-transparent"></span>'; btn.disabled = true;
+
+            const sys = "Anda AI Tutor. Berikan instruksi Markdown: 1. Jawaban Akhir 2. Langkah-langkah 3. Konsep.";
+            const prompt = text || "Tolong jelaskan dan selesaikan soal yang ada di foto ini.";
+            
+            const res = await fetchAI(prompt, sys, false, state.pr.imageBase64, state.pr.imageMime);
+            if(res) {
+                document.getElementById('prContent').innerHTML = marked.parse(res);
+                document.getElementById('prResult').classList.remove('hidden');
+                addXP(5);
+            }
+            btn.innerHTML = orig; btn.disabled = false;
+        }
+
+        /* --- TRIVIA & STUDY PLAN --- */
+        async function startTriviaAPI(e) {
+            e.preventDefault();
+            const topic = document.getElementById('triviaTopic').value;
+            const res = await fetchAI(`Buat 5 soal trivia ${topic}`, "Output JSON array", true);
+            if(res) {
+                state.trivia.data = res; state.trivia.currentQ = 0; state.trivia.score = {benar:0, salah:0};
+                document.getElementById('triviaConfig').classList.add('hidden');
+                document.getElementById('triviaPlay').classList.remove('hidden');
+                renderTriviaQuestion();
+            }
+        }
+
+        function renderTriviaQuestion() {
+            const q = state.trivia.data[state.trivia.currentQ];
+            document.getElementById('triviaQuestion').textContent = q.question;
+            const optArea = document.getElementById('triviaOptions');
+            optArea.innerHTML = '';
+            (q.options||[]).forEach(opt => {
+                optArea.insertAdjacentHTML('beforeend', `<button onclick="answerTrivia('${opt.replace(/'/g, "\\'")}')" class="w-full p-4 rounded-xl border-2 border-slate-200 font-bold hover:bg-orange-50">${opt}</button>`);
+            });
+        }
+
+        function answerTrivia(userAns) {
+            const q = state.trivia.data[state.trivia.currentQ];
+            if(userAns === q.correctAnswer) state.trivia.score.benar++;
+            else state.trivia.score.salah++;
+            state.trivia.currentQ++;
+            if(state.trivia.currentQ >= state.trivia.data.length) {
+                document.getElementById('triviaPlay').classList.add('hidden');
+                document.getElementById('triviaResult').classList.remove('hidden');
+                document.getElementById('trivResBenar').textContent = state.trivia.score.benar;
+                document.getElementById('trivResSalah').textContent = state.trivia.score.salah;
+            } else renderTriviaQuestion();
+        }
+
+        function resetTrivia() { document.getElementById('triviaResult').classList.add('hidden'); document.getElementById('triviaConfig').classList.remove('hidden'); }
+
+        async function generateStudyPlan() {
+            const btn = document.getElementById('btnStudyAI');
+            btn.innerHTML = '<span class="loader border-white border-t-transparent"></span> Menyusun...'; btn.disabled = true;
+            const res = await fetchAI(`Buatkan rencana belajar mingguan untuk siswa bernama ${state.profile.name}, umur ${state.profile.age} tahun, kelas/jenjang ${state.profile.level} di ${state.profile.school}.`, "Output Markdown", false);
+            if(res) {
+                document.getElementById('studyPlanContent').innerHTML = marked.parse(res);
+                document.getElementById('studyPlanResult').classList.remove('hidden');
+            }
+            btn.innerHTML = 'Buatkan Rencana Belajar Saya'; btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
